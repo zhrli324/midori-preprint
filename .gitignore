@@ -1,0 +1,17 @@
+# LaTeX build files
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.toc
+*.synctex.gz
+template/main.pdf
+.build/
+
+# Python / OS
+__pycache__/
+*.pyc
+.DS_Store

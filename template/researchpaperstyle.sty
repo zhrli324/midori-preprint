@@ -1,0 +1,117 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{researchpaperstyle}[2026/09/09 v2.2 Expressive monochrome paper typography]
+% Optional helpers. No page geometry, global fonts, or section redefinitions.
+\newif\ifrps@boxes
+\newif\ifrps@symbols
+\newif\ifrps@mono
+\newif\ifrps@colors
+\DeclareOption{boxes}{\rps@boxestrue\rps@colorstrue}
+\DeclareOption{symbols}{\rps@symbolstrue}
+\DeclareOption{colors}{\rps@colorstrue}
+\DeclareOption{expressive}{\rps@boxestrue\rps@symbolstrue\rps@colorstrue}
+\DeclareOption{monochrome}{\rps@monotrue}
+\DeclareOption*{\PackageError{researchpaperstyle}{Unknown option \CurrentOption}{Use expressive, boxes, symbols, colors, or monochrome.}}
+\ProcessOptions\relax
+
+% Font declarations avoid class-level redefinitions of \textbf and \emph.
+% Missing font shapes must still be checked in the target document's log.
+% Enter horizontal mode before styling: a pending run-in paragraph heading
+% must not inherit the font or color of its first body token.
+\DeclareRobustCommand{\rpsStrong}[1]{\leavevmode{\bfseries #1}}
+\DeclareRobustCommand{\rpsTerm}[1]{\leavevmode{\itshape #1}}
+\DeclareRobustCommand{\rpsStrongTerm}[1]{\leavevmode{\bfseries\itshape #1}}
+\DeclareRobustCommand{\rpsMethod}[1]{\leavevmode{\normalfont\ttfamily\bfseries #1}}
+\DeclareRobustCommand{\rpsBaseline}[1]{\leavevmode #1}
+\DeclareRobustCommand{\rpsModel}[1]{\leavevmode{\fontfamily{pcr}\selectfont {#1}}}
+\DeclareRobustCommand{\rpsDataset}[1]{\leavevmode #1}
+\DeclareRobustCommand{\rpsBenchmark}[1]{\leavevmode{\fontfamily{cmtt}\selectfont {#1}}}
+\DeclareRobustCommand{\rpsModule}[1]{\leavevmode{\normalfont\rmfamily\mdseries\scshape #1}}
+\DeclareRobustCommand{\rpsCode}[1]{\leavevmode{\ttfamily #1}}
+\DeclareRobustCommand{\rpsBest}[1]{\leavevmode{\bfseries #1}}
+\DeclareRobustCommand{\rpsSecond}[1]{\underline{#1}}
+\ifrps@symbols
+  \RequirePackage{pifont}
+\fi
+\DeclareRobustCommand{\rpsNumber}[1]{%
+  \leavevmode
+  \ifrps@symbols
+    \ifnum#1>0\relax
+      \ifnum#1<11\relax\ding{\numexpr181+#1\relax}%
+      \else\number\numexpr#1\relax\fi
+    \else\number\numexpr#1\relax\fi
+  \else\number\numexpr#1\relax\fi}
+
+\ifrps@colors
+  \RequirePackage{xcolor}
+  % Retained names for old callers; the style is monochrome in every mode.
+  \definecolor{rpsAccent}{gray}{0}
+  \definecolor{rpsInsight}{gray}{0}
+  \definecolor{rpsPrompt}{gray}{0}
+  \ifrps@mono
+    \colorlet{rpsAccent}{black!75}
+    \colorlet{rpsInsight}{black!75}
+    \colorlet{rpsPrompt}{black!75}
+  \fi
+\fi
+\DeclareRobustCommand{\rpsColor}[2]{%
+  \ifmmode\else\leavevmode\fi
+  #2}% Compatibility wrapper: intentionally does not add color.
+\DeclareRobustCommand{\rpsIcon}[1]{\ifrps@symbols\leavevmode\ding{#1}\fi}
+\DeclareRobustCommand{\rpsComponent}[2]{%
+  \rpsColor{rpsAccent}{\rpsIcon{#1}}%
+  \ifrps@symbols\nobreakspace\fi\rpsModule{#2}}
+\DeclareRobustCommand{\rpsStage}[1]{%
+  \rpsColor{rpsAccent}{\ensuremath{\triangleright}\nobreakspace\rpsStrong{#1}}}
+
+% References always use Arabic numerals; the visible heading can use dingbats.
+\newcounter{rpsobservation}
+\renewcommand{\therpsobservation}{\arabic{rpsobservation}}
+\providecommand{\theHrpsobservation}{\arabic{rpsobservation}}
+\newcommand{\rpsObservation}[1]{%
+  \par\refstepcounter{rpsobservation}\noindent
+  \rpsColor{rpsInsight}{\rpsStrong{Observation~\rpsNumber{\value{rpsobservation}}:}}%
+  \space\rpsStrong{#1}\space
+  \ignorespaces}
+\AtBeginDocument{%
+  \@ifpackageloaded{cleveref}{%
+    \crefname{rpsobservation}{observation}{observations}%
+    \Crefname{rpsobservation}{Observation}{Observations}}{}%
+  \@ifpackageloaded{hyperref}{%
+    \pdfstringdefDisableCommands{%
+      \def\rpsStrong#1{#1}\def\rpsTerm#1{#1}%
+      \def\rpsStrongTerm#1{#1}\def\rpsMethod#1{#1}%
+      \def\rpsBaseline#1{#1}\def\rpsModel#1{#1}%
+      \def\rpsDataset#1{#1}\def\rpsBenchmark#1{#1}%
+      \def\rpsModule#1{#1}\def\rpsColor#1#2{#2}%
+      \def\rpsIcon#1{}\def\rpsComponent#1#2{#2}\def\rpsStage#1{#1}%
+      \def\rpsCode#1{#1}\def\rpsBest#1{#1}%
+      \def\rpsSecond#1{#1}\def\rpsNumber#1{#1}}}{}% 
+}
+
+\ifrps@boxes
+  \RequirePackage{tcolorbox}
+  \tcbuselibrary{skins,breakable,listings}
+  \tcbset{rpsbase/.style={enhanced,breakable,boxrule=0.5pt,arc=2pt,
+    left=4pt,right=4pt,top=4pt,bottom=4pt,
+    before skip=0.6\baselineskip,after skip=0.6\baselineskip}}
+  \newtcolorbox{rpsquestion}[1][]{rpsbase,
+    colback=rpsAccent!4!white,colframe=rpsAccent!45!white,
+    fontupper=\itshape,#1}
+  \newtcolorbox{rpsprotocol}[2][]{rpsbase,
+    colback=white,colframe=rpsAccent,
+    colbacktitle=rpsAccent,coltitle=white,fonttitle=\bfseries,
+    title={#2},#1}
+  \newtcolorbox{rpsinsight}[2][]{rpsbase,
+    colback=rpsInsight!4!white,colframe=rpsInsight,
+    colbacktitle=rpsInsight,coltitle=white,fonttitle=\bfseries,
+    title={#2},#1}
+  % Raw prompt text: no escapeinside, mathescape, or execution hooks.
+  \newtcblisting{rpsprompt}[2][]{rpsbase,
+    colback=rpsPrompt!5!white,colframe=rpsPrompt,
+    colbacktitle=rpsPrompt,coltitle=white,fonttitle=\bfseries,
+    title={#2},listing only,
+    listing options={language={},basicstyle=\ttfamily\footnotesize,
+      breaklines=true,columns=fullflexible,keepspaces=true,
+      showstringspaces=false,tabsize=2},#1}
+\fi
+\endinput

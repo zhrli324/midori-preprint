@@ -1,0 +1,334 @@
+\documentclass{article} % For LaTeX2e
+\usepackage{preprint}  % options: [anonymous], [monochrome], [wide]
+\usepackage{microtype}
+
+% Optional math commands from https://github.com/goodfeli/dlbook_notation.
+\input{math_commands.tex}
+
+\usepackage{subcaption}
+\usepackage{wrapfig}
+\usepackage{hyperref}            % link colours are set by preprint.sty
+\usepackage{url}
+\usepackage[capitalise,noabbrev,nameinlink]{cleveref}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{amssymb}
+\usepackage{mathtools}            % \mathclap for wide \underbrace labels
+\usepackage{multirow}
+\usepackage{makecell}
+\usepackage{float}
+
+% ------------------------------------------------------------------ entities
+% One macro per name; the font follows the entity's category, not its role
+% in a table. All names below are placeholders.
+\newcommand{\ourmethod}{\rpsMethod{OurMethod}}        % our method: bold mono
+\newcommand{\priorA}{\rpsBaseline{PriorA}}            % external methods: plain
+\newcommand{\priorB}{\rpsBaseline{PriorB}}
+\newcommand{\modelS}{\rpsModel{Model-3B}}             % models: pcr
+\newcommand{\modelL}{\rpsModel{Model-7B}}
+\newcommand{\corpus}{\rpsDataset{TrainCorpus}}        % datasets: plain
+\newcommand{\benchA}{\rpsBenchmark{BenchA}}           % benchmarks: cmtt
+\newcommand{\benchB}{\rpsBenchmark{BenchB}}
+% Named modules: small caps + a fixed symbol, reused in text, figures, tables.
+\newcommand{\router}{\rpsComponent{95}{Router}}       % filled flower
+\newcommand{\corrector}{\rpsComponent{96}{Corrector}} % open flower
+\newcommand{\routername}{\rpsModule{Router}}
+\newcommand{\correctorname}{\rpsModule{Corrector}}
+
+% ------------------------------------------------------------------ front matter
+\title{\ourmethod{}: Your Paper Title Goes Here\\in Two Balanced Lines}
+
+% One \author per person; the optional argument holds the superscripts.
+\author[1,2,\star]{First Author}
+\author[1,\star]{Second Author}
+\author[2]{Third Author}
+\author[3]{Fourth Author}
+\author[1,\dagger]{Last Author}
+
+\affiliation[1]{University One}
+\affiliation[2]{Company Two}
+\affiliation[3]{Institute Three}
+
+\authornote[\star]{Equal contribution}
+\authornote[\dagger]{Corresponding author}
+
+% Lines printed at the bottom of the abstract box (all optional).
+\date{\today}
+\metadata[Code]{\url{https://github.com/your-org/your-repo}}
+\correspondence{\email{last.author@example.com}}
+
+% Logos at the top left of page 1 (delete \logos{...} for none).
+% NTU lockup | Midori icon + wordmark, all centred on one axis.
+\logos{%
+  \logoimage[0.42in]{figures/ntu-logo}%
+  \logodivider[0.42in]%
+  \logoimage[0.42in]{figures/midori-icon}\hspace{0.6em}%
+  \logoimage[0.13in]{figures/midori-wordmark}}
+% Alternative: the original stacked Midori logo (icon above wordmark):
+%   \logoimage[0.55in]{figures/midori-logo}
+
+% Header text from page 2 onward.
+\runninghead{Preprint}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Template text: every claim, name and number in this file is a placeholder.
+Large models often fail when \rpsStrong{two input sources disagree}, even
+though the evidence needed for the answer is still present in one of them.
+We propose \ourmethod{}, a \rpsTerm{training-free} method that detects such
+disagreements and corrects the joint prediction at inference time. On \benchA{}
+and \benchB{}, \ourmethod{} improves overall accuracy on \modelL{} from 70.5\%
+to 85.9\% in this illustrative setting.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:intro}
+
+Background paragraphs stay in plain text. Recent models jointly process
+several input sources and are widely used in downstream
+applications~\citep{vaswani2017attention,goodfellow2016deep}. Combining sources,
+however, does not guarantee that the answer is grounded in the right one.
+
+The key bottleneck is that \rpsStrong{the relevant evidence is often still
+recoverable}, yet the joint prediction ignores it. The two sources differ in
+\rpsTerm{which question they can answer}, while sharing the same
+\rpsTerm{internal representation}. This raises the central question of this work:
+
+\begin{rpsquestion}
+Can a model recover the answer from the relevant source when the joint
+prediction has already gone wrong?
+\end{rpsquestion}
+
+We answer it with \ourmethod{} (\cref{fig:overview}), which first locates the
+relevant source with a \router{} and then steers the joint representation
+with a \corrector{}. The main contributions are:
+
+\begin{contributions}
+  \item \rpsStrongTerm{A recoverable failure mode.} We identify cases where the
+  joint prediction is wrong but a single-source view is right, and measure how
+  often they occur.
+  \item \rpsStrongTerm{A training-free correction.} \ourmethod{} detects these
+  cases and corrects them at inference time without updating model weights.
+  \item \rpsStrongTerm{Controlled evaluation.} We evaluate on \benchA{} and
+  \benchB{} with two model sizes and compare against \priorA{} and \priorB{}.
+\end{contributions}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth,height=1.8in]{example-image-16x9}
+  \caption{\textbf{Overview of \ourmethod{}.} \rpsStrongTerm{(a) Detect:} the
+  \router{} selects the relevant source and checks for a decision conflict.
+  \rpsStrongTerm{(b) Correct:} the \corrector{} steers the joint representation
+  toward that source. Flower markers match the module names in the text.}
+  \label{fig:overview}
+\end{figure}
+
+\section{Related Work}
+\label{sec:related}
+
+\paragraph{Joint multi-source models.}
+Plain text for the survey of one category of prior work~\citep{Hinton06}.
+End with one sentence that positions this paper against the category.
+
+\paragraph{Inference-time correction.}
+Methods such as \priorA{} and \priorB{} adjust the output distribution at
+decoding time. They \rpsTerm{suppress} errors, whereas \ourmethod{}
+\rpsTerm{recovers} the missing evidence.
+
+\section{Method}
+\label{sec:method}
+
+\paragraph{Problem setup.}
+Given input sources $a$ and $v$ and a question $q$, a model with parameters
+$\bm{\theta}$ produces a score $z_c$ for every candidate $c\in\mathcal{C}$.
+The prediction and its margin are
+\begin{equation}
+  \hat{y} = \argmax_{c\in\mathcal{C}} z_c, \qquad
+  m = z_{\hat{y}} - \max_{c\neq\hat{y}} z_c .
+  \label{eq:margin}
+\end{equation}
+
+\noindent\rpsStage{Stage 1: Detect.}
+The \router{} withholds the competing source and predicts $\hat{y}_{\mathrm{uni}}$.
+A conflict is flagged when $\hat{y}_{\mathrm{uni}}\neq\hat{y}$.
+
+\noindent\rpsStage{Stage 2: Correct.}
+For flagged inputs, the \corrector{} shifts the hidden state
+$\mathbf{h}_\ell\in\mathbb{R}^{d}$ at layer $\ell$:
+\begin{equation}
+  \mathbf{h}'_\ell
+  = \mathbf{h}_\ell
+  + \underbrace{\alpha\,(\mathbf{h}^{\mathrm{uni}}_\ell - \mathbf{h}_\ell)}_{\mathclap{\text{\correctorname{} residual}}},
+  \label{eq:correct}
+\end{equation}
+where $\alpha$ scales with the confidence of the single-source view.
+\cref{alg:method} summarizes both stages.
+
+\begin{algorithm}[t]
+\caption{\ourmethod{} inference}
+\label{alg:method}
+\begin{algorithmic}[1]
+\Require sources $a, v$; question $q$; strength $\alpha$
+\State $\hat{y} \gets \argmax_c z_c(a, v, q)$ \Comment{joint prediction}
+\State $\hat{y}_{\mathrm{uni}} \gets$ \routername{}$(a, v, q)$ \Comment{Stage 1: Detect}
+\If{$\hat{y}_{\mathrm{uni}} \neq \hat{y}$}
+  \State apply \cref{eq:correct} at the selected layers \Comment{Stage 2: Correct}
+  \State $\hat{y} \gets \argmax_c z'_c$
+\EndIf
+\State \Return $\hat{y}$
+\end{algorithmic}
+\end{algorithm}
+
+\section{Experiments}
+\label{sec:exp}
+
+\paragraph{Setup.}
+We evaluate \modelS{} and \modelL{} on \benchA{} and \benchB{}; the
+hyperparameters are tuned on a held-out split of \corpus{}. Baselines are
+\priorA{} and \priorB{} under the same decoding settings.
+
+\begin{table*}[t]
+\centering
+\caption{\textbf{Main results (\%).} Placeholder numbers on \modelL{}. Higher
+is better for all columns. Within each column, the best value is \textbf{bold}
+and the second best is \underline{underlined}; the shaded row marks our method
+and does not by itself indicate the best result.}
+\label{tab:main}
+\small
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.12}
+\begin{tabular}{@{}ll cc cc c@{}}
+\toprule
+& & \multicolumn{2}{c}{\benchA{}} & \multicolumn{2}{c}{\benchB{}}
+& \multirow{2}{*}{\shortstack[c]{Overall\\Acc.}} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}
+\textbf{Backbone} & \textbf{Method} & Acc. & F1 & Acc. & F1 & \\
+\midrule
+\multirow{4}{*}{\modelL{}}
+& Baseline   & 69.3 & 75.7 & 71.8 & 77.0 & 70.5 \\
+& +\priorA{} & \rpsSecond{75.5} & \rpsSecond{79.4} & 66.5 & 73.5 & 71.0 \\
+& +\priorB{} & 72.1 & 77.8 & \rpsSecond{75.5} & \rpsSecond{79.1} & \rpsSecond{73.8} \\
+& \ourscell{+\ourmethod{}}
+& \ourscell{\rpsBest{82.0}} & \ourscell{\rpsBest{84.1}}
+& \ourscell{\rpsBest{89.8}} & \ourscell{\rpsBest{89.8}}
+& \ourscell{\rpsBest{85.9}} \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\rpsObservation{\ourmethod{} gives the largest gain on \benchB{}.}\label{obs:bench}
+Relative to the strongest baseline in each column, accuracy rises by 6.5
+points on \benchA{} (75.5 $\rightarrow$ 82.0) and by 14.3 points on \benchB{}
+(75.5 $\rightarrow$ 89.8), as shown in \cref{tab:main}.
+
+\begin{wraptable}{r}{0.46\columnwidth}
+\vspace{-0.6em}
+\setlength{\abovecaptionskip}{3pt}
+\setlength{\belowcaptionskip}{-6pt}
+\setlength{\tabcolsep}{2.7pt}
+\renewcommand{\arraystretch}{1.05}
+\centering
+\caption{\textbf{Scaling.} Overall accuracy (\%); gains over Base in parentheses.}
+\label{tab:scaling}
+\small
+\begin{tabular}{llc}
+\toprule
+\textbf{Model} & \textbf{Method} & \textbf{Acc.} \\
+\midrule
+\multirow{2}{*}{\modelS{}} & Base & 76.9 \\
+ & $\hookrightarrow$ +\ourmethod{} & 82.5 \gain{5.6} \\
+\midrule
+\multirow{2}{*}{\modelL{}} & Base & 70.5 \\
+ & $\hookrightarrow$ +\ourmethod{} & 85.9 \gain{15.4} \\
+\bottomrule
+\end{tabular}
+\end{wraptable}
+
+\rpsObservation{Across the two sizes we test, the gain is larger on \modelL{}.}\label{obs:scale}
+\cref{tab:scaling} shows a gain of 5.6 points on \modelS{} and 15.4 points on
+\modelL{}. With only two sizes, this does not establish a trend with scale.
+Plain text continues the analysis here. Lorem ipsum dolor sit amet,
+consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et
+dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation
+ullamco laboris nisi ut aliquip ex ea commodo consequat.
+
+\begin{rpsinsight}{Takeaway}
+\rpsStrong{The overall gain is not uniform across benchmarks or model sizes.}
+Report \benchA{} and \benchB{} separately, as in \cref{obs:bench,obs:scale}.
+\end{rpsinsight}
+
+\section{Conclusion}
+Summarize the findings in plain text, reusing the entity macros.
+
+\paragraph{Limitations and Future Work.}
+\ourmethod{} assumes that \rpsStrong{the relevant evidence is still present in
+one source}; it may help less when that evidence is weakly encoded.
+
+\subsection*{AI use statement}
+Describe how generative AI tools were used in preparing the manuscript.
+
+\subsection*{Reproducibility Statement}
+Point to the sections and appendices that support reproduction.
+
+\bibliography{references}
+\bibliographystyle{preprint}
+
+% ------------------------------------------------------------------ appendix
+\appendix
+\clearpage
+
+\section*{Appendix Overview}
+
+\begin{appendixoverview}
+  \appentry{app:impl}{Implementation Details}
+  \appsubentry{app:prompt}{Prompt for the \routername{}}
+  \appendrule
+  \appentry{app:style}{Typography Key}
+\end{appendixoverview}
+
+\section{Implementation Details}
+\label{app:impl}
+
+\subsection{Prompt for the \routername{}}
+\label{app:prompt}
+Prompts and other raw materials go in a breakable monospace box; the text is
+kept verbatim.
+
+\begin{rpsprompt}{Router prompt}
+SYSTEM: You will see a question about an audio-visual clip.
+USER: {question}
+To answer this question, which modality is needed (audio, video, or both):
+\end{rpsprompt}
+
+\section{Typography Key}
+\label{app:style}
+
+\begin{table}[H]
+\centering
+\caption{\textbf{Formatting roles used in this template.} Delete this appendix
+in your paper.}
+\label{tab:style-key}
+\small
+\begin{tabular}{lll}
+\toprule
+\textbf{Role} & \textbf{Macro} & \textbf{Example} \\
+\midrule
+Our method        & \rpsCode{\char92 rpsMethod}    & \ourmethod{} \\
+External method   & \rpsCode{\char92 rpsBaseline}  & \priorA{} \\
+Model             & \rpsCode{\char92 rpsModel}     & \modelL{} \\
+Dataset           & \rpsCode{\char92 rpsDataset}   & \corpus{} \\
+Benchmark         & \rpsCode{\char92 rpsBenchmark} & \benchA{} \\
+Named module      & \rpsCode{\char92 rpsComponent} & \router{}, \corrector{} \\
+Method stage      & \rpsCode{\char92 rpsStage}     & \rpsStage{Stage 1: Detect.} \\
+Key phrase        & \rpsCode{\char92 rpsStrong}    & \rpsStrong{bottleneck} \\
+Contrast          & \rpsCode{\char92 rpsTerm}      & \rpsTerm{suppress} vs.\ \rpsTerm{recover} \\
+Contribution head & \rpsCode{\char92 rpsStrongTerm} & \rpsStrongTerm{Short title.} \\
+Finding           & \rpsCode{\char92 rpsObservation} & \rpsStrong{Observation \rpsNumber{1}:} \ldots \\
+Gain / drop       & \rpsCode{\char92 gain}, \rpsCode{\char92 drop} & 85.9 \gain{15.4}, 70.1 \drop{2.3} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\end{document}

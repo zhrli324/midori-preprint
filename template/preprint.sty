@@ -1,0 +1,521 @@
+%% preprint.sty -- clean single-column arXiv preprint style
+%%
+%% Body layout from arXiv 2610.18141 (COLM 2026 preprint style + that paper's
+%% preamble); title page and accents from arXiv 2605.09965 (a report class):
+%%   * Palatino text/math, Montserrat sans for headings and bold, Inconsolata tt
+%%   * 5.5in single column (or [wide]: 6.5in), no paragraph indent
+%%   * first page: optional logos, title framed by a thick and a thin rule,
+%%     keyed authors/affiliations, abstract in a rounded box with metadata
+%%     lines (Date, Code, Correspondence, ...)
+%%   * Midori green palette (deep green 2D4227 accent + leaf/matcha tints)
+%%   * accent-green sans section headings, sans-bold captions and \textbf
+%%   * small running head with a thin accent rule from page 2 on
+%%   * accent-green hyperlinks, author-year natbib citations
+%%   * helpers for highlighted "ours" table cells, gains, appendix overview
+%%   * the research-paper-style writing layer (researchpaperstyle.sty):
+%%     entity fonts, circled contributions, module symbols, stage markers,
+%%     numbered observations, and black-and-white question/takeaway/prompt boxes
+%%
+%% Usage:
+%%   \documentclass{article}
+%%   \usepackage{preprint}             % named authors (default)
+%%   \usepackage[anonymous]{preprint}  % "Anonymous authors" block
+%%   \usepackage[monochrome]{preprint} % black-and-white: no green accents
+%%   \usepackage[wide]{preprint}       % 6.5in text block (1in margins)
+%%   \usepackage[nowritingstyle]{preprint} % layout only: do not load the
+%%                                     % research-paper-style layer (\rps...)
+%%   \usepackage[nonatbib]{preprint}   % do not load natbib (e.g. biblatex papers)
+%%
+%%   \author[1,\star]{First Author}    % repeat once per author
+%%   \affiliation[1]{University One}   % repeat once per affiliation
+%%   \authornote[\star]{Equal contribution}
+%%   \date{\today}                     % optional lines in the abstract box
+%%   \metadata[Code]{\url{https://github.com/...}}
+%%   \correspondence{\email{name@example.com}}
+%%   \logos{\includegraphics[height=0.36in]{figures/logo1.png}}
+%%   \runninghead{Preprint}           % text in the header from page 2 on
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{preprint}[2026/10/15 arXiv preprint style]
+
+% ---------------------------------------------------------------- options
+\newif\if@preprint@anon
+\@preprint@anonfalse
+\DeclareOption{anonymous}{\@preprint@anontrue}
+\DeclareOption{preprint}{\@preprint@anonfalse}
+\newif\if@preprint@mono
+\@preprint@monofalse
+\DeclareOption{monochrome}{\@preprint@monotrue}
+\newif\if@preprint@wide
+\@preprint@widefalse
+\DeclareOption{wide}{\@preprint@widetrue}
+% The writing-style layer (researchpaperstyle.sty) only adds macros; papers
+% that do not use them can skip it and keep their own formatting untouched.
+\newif\if@preprint@rps
+\@preprint@rpstrue
+\DeclareOption{nowritingstyle}{\@preprint@rpsfalse}
+\newif\if@preprint@natbib
+\@preprint@natbibtrue
+\DeclareOption{nonatbib}{\@preprint@natbibfalse}
+\ProcessOptions\relax
+
+% ---------------------------------------------------------------- fonts
+\RequirePackage[T1]{fontenc}
+% Palatino
+\RequirePackage{tgpagella}   % text only
+\RequirePackage{mathpazo}    % math & text
+\RequirePackage{inconsolata} % for tt font
+% mathpazo declares lowercase Greek as \mathalpha, so \mathbf{\tau},
+% \mathrm{\lambda} etc. switch to a text font and print garbage. Restore the
+% standard LaTeX behaviour: lowercase Greek is \mathord (unaffected by math
+% alphabets, as with Computer Modern or Times), and the operators font is
+% Palatino's upright math font (zplm), which contains upright Greek, so
+% \mathrm{\Omega} and \mathbf{\Omega} (also via bm) work.
+\DeclareSymbolFont{operators}{OT1}{zplm}{m}{n}
+\SetSymbolFont{operators}{bold}{OT1}{zplm}{b}{n}
+\DeclareMathAlphabet{\mathbf}{OT1}{zplm}{b}{n}
+\def\preprint@greek#1#2{\DeclareMathSymbol{#1}{\mathord}{letters}{#2}}
+\preprint@greek\alpha{"0B}\preprint@greek\beta{"0C}\preprint@greek\gamma{"0D}
+\preprint@greek\delta{"0E}\preprint@greek\epsilon{"0F}\preprint@greek\zeta{"10}
+\preprint@greek\eta{"11}\preprint@greek\theta{"12}\preprint@greek\iota{"13}
+\preprint@greek\kappa{"14}\preprint@greek\lambda{"15}\preprint@greek\mu{"16}
+\preprint@greek\nu{"17}\preprint@greek\xi{"18}\preprint@greek\pi{"19}
+\preprint@greek\rho{"1A}\preprint@greek\sigma{"1B}\preprint@greek\tau{"1C}
+\preprint@greek\upsilon{"1D}\preprint@greek\phi{"1E}\preprint@greek\chi{"1F}
+\preprint@greek\psi{"20}\preprint@greek\omega{"21}\preprint@greek\varepsilon{"22}
+\preprint@greek\vartheta{"23}\preprint@greek\varpi{"24}\preprint@greek\varrho{"25}
+\preprint@greek\varsigma{"26}\preprint@greek\varphi{"27}
+\def\preprint@Greek#1#2{\DeclareMathSymbol{#1}{\mathalpha}{operators}{#2}}
+\preprint@Greek\Gamma{"00}\preprint@Greek\Delta{"01}\preprint@Greek\Theta{"02}
+\preprint@Greek\Lambda{"03}\preprint@Greek\Xi{"04}\preprint@Greek\Pi{"05}
+\preprint@Greek\Sigma{"06}\preprint@Greek\Upsilon{"07}\preprint@Greek\Phi{"08}
+\preprint@Greek\Psi{"09}\preprint@Greek\Omega{"0A}
+% Geometric sans (open-source stand-in for the report's ByteSans) for
+% headings, captions and bold emphasis; scaled to Palatino's x-height.
+\RequirePackage[semibold,scale=0.9]{montserrat}
+
+% ---------------------------------------------------------------- packages
+\RequirePackage{graphicx}
+\RequirePackage[table]{xcolor}
+\RequirePackage{array}
+\RequirePackage{tabularx}
+\RequirePackage{booktabs}
+\RequirePackage{fancyhdr}
+\if@preprint@natbib
+  \RequirePackage{natbib}
+\fi
+\RequirePackage{etoolbox}
+\RequirePackage{caption}
+% tcolorbox (abstract box) is loaded at the end of the preamble, so a paper
+% that loads it itself with options (e.g. [most]) does so first, without an
+% option clash. The writing-style layer below loads it immediately.
+
+% Writing-style layer: entity fonts, symbols, observations and boxes.
+% Loaded after xcolor[table] so its own xcolor request causes no clash.
+\if@preprint@rps
+  \RequirePackage{enumitem}
+  \RequirePackage[expressive]{researchpaperstyle}
+\fi
+
+% modification to natbib citations
+\if@preprint@natbib
+  \setcitestyle{authoryear,round,citesep={;},aysep={,},yysep={;}}
+\fi
+
+\renewcommand{\topfraction}{0.95}   % let figure take up nearly whole page
+\renewcommand{\textfraction}{0.05}  % let figure take up nearly whole page
+
+% ---------------------------------------------------------------- page size
+\setlength{\paperheight}{11in}
+\setlength{\paperwidth}{8.5in}
+
+\oddsidemargin .5in    %   Note \oddsidemargin = \evensidemargin
+\evensidemargin .5in
+\marginparwidth 0.07 true in
+\topmargin -0.625in
+\addtolength{\headsep}{0.25in}
+\textheight 9.0 true in       % Height of text (including footnotes & figures)
+\textwidth 5.5 true in        % Width of text line.
+\if@preprint@wide
+  \oddsidemargin 0in
+  \evensidemargin 0in
+  \textwidth 6.5 true in
+\fi
+\widowpenalty=10000
+\clubpenalty=10000
+
+% Pull the header closer to the text block (from the paper's preamble).
+\addtolength{\topmargin}{0.3in}
+\addtolength{\headsep}{-0.3in}
+
+\sloppy
+% Keep top floats close to the text without stretching vertical gaps.
+\setlength{\textfloatsep}{10pt plus 2pt minus 2pt}
+% Pages holding only floats start at the top instead of centring vertically.
+\setlength{\@fptop}{0pt}
+\setlength{\@fpsep}{14pt plus 4pt}
+\setlength{\@fpbot}{0pt plus 1fil}
+\raggedbottom
+
+% No table of contents is ever needed.
+\def\addcontentsline#1#2#3{}
+
+% ---------------------------------------------------------------- colours
+% Midori palette ("midori" = green): one deep green for structure, two
+% lighter greens for figures and tints, red kept only for regressions.
+\definecolor{midori}{HTML}{2D4227}           % deep green: headings, rules
+\definecolor{midorileaf}{HTML}{5A8F4E}       % leaf green: figure accent, tints
+\definecolor{midorimatcha}{HTML}{8DB06A}     % matcha: secondary accent (heatmaps)
+\colorlet{accent}{midori}
+\definecolor{linkgreen}{HTML}{4A8240}         % links: lighter than the accent
+                                             % (4.6:1 contrast on white)
+\definecolor{oursbg}{HTML}{E6EFE1}           % highlighted "ours" table cells
+\colorlet{oursgreen}{midorileaf}             % accent colour for figures/text
+\definecolor{gaingreen}{HTML}{3B7D3F}        % (+x.x) improvements
+\definecolor{dropred}{RGB}{190,70,70}       % (-x.x) regressions
+\colorlet{appendixheader}{midorileaf!28}   % appendix overview header row
+\colorlet{appendixpurple}{midorileaf!9}    % appendix overview section rows
+% Old names kept so documents written for earlier versions still compile.
+\colorlet{linkblue}{linkgreen}
+\colorlet{oursblue}{oursgreen}
+\colorlet{oursteal}{midorimatcha}
+\colorlet{gainblue}{gaingreen}
+
+% The monochrome option maps every accent to black or light grey.
+\if@preprint@mono
+  \colorlet{accent}{black}
+  \colorlet{linkgreen}{black}
+  \colorlet{linkblue}{black}
+  \colorlet{oursbg}{black!6}
+  \colorlet{gaingreen}{black}
+  \colorlet{gainblue}{black}
+  \colorlet{dropred}{black}
+  \colorlet{appendixheader}{black!15}
+  \colorlet{appendixpurple}{black!5}
+\fi
+
+% Accent-green links, applied only if the document loads hyperref.
+\AtBeginDocument{%
+  \@ifpackageloaded{hyperref}{%
+    \hypersetup{colorlinks=true,citecolor=linkgreen,linkcolor=linkgreen,
+                urlcolor=linkgreen}}{}}
+
+% ---------------------------------------------------------------- headers
+\newcommand{\@runninghead}{Preprint}
+\newcommand{\runninghead}[1]{\renewcommand{\@runninghead}{#1}}
+
+\newcommand{\@headfont}{\footnotesize\sffamily\color{accent}}
+\pagestyle{fancy}
+\fancyhead{}
+\fancyhead[L]{\@headfont\@runninghead}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\headrule}{{\color{accent}\hrule\@height\headrulewidth\@width\headwidth}\vskip-\headrulewidth}
+\fancypagestyle{plain}{%
+  \fancyhead{}
+  \fancyhead[L]{\@headfont\@runninghead}
+  \renewcommand{\headrulewidth}{0.4pt}%
+}
+\fancypagestyle{firstpage}{%
+  \fancyhead{}
+  \renewcommand{\headrulewidth}{0pt}%
+}
+\AtBeginDocument{\pagestyle{fancy}}
+
+% ---------------------------------------------------------------- title
+\newcommand{\@logos}{}
+\newcommand{\logos}[1]{\renewcommand{\@logos}{#1}}
+% Logo-row helpers: every piece is centred on one horizontal axis.
+%   \logoimage[height]{file}   an image, vertically centred
+%   \logodivider[height]       thin grey vertical rule between two logos
+\newcommand{\logoimage}[2][0.42in]{%
+  \raisebox{-0.5\height}{\includegraphics[height=#1]{#2}}}
+\newcommand{\logodivider}[1][0.42in]{%
+  \hspace{1.2em}{\color{black!25}\rule[-0.5\dimexpr#1\relax]{0.6pt}{#1}}\hspace{1.2em}}
+
+\def\maketitle{\par
+\begingroup
+   \def\thefootnote{\fnsymbol{footnote}}
+   \def\@makefnmark{\hbox to 0pt{$^{\@thefnmark}$\hss}} % for perfect author
+                                                        % name centering
+   \long\def\@makefntext##1{\parindent 1em\noindent
+                            \hbox to1.8em{\hss $\m@th ^{\@thefnmark}$}##1}
+   \@maketitle \@thanks
+\endgroup
+\thispagestyle{firstpage}%
+\suppressfloats[t]% keep [t] floats from landing above the title
+\setcounter{footnote}{0}
+\let\maketitle\relax \let\@maketitle\relax
+\gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+
+% Keyed front matter (old free-form \author{...} blocks still work).
+\newcommand{\@authorlist}{}
+\newcommand{\@affiliationlist}{}
+\newcommand{\@authornotelist}{}
+\newcommand{\@metadatalist}{}
+% A keyed name never breaks across lines; a free-form block (no optional
+% argument) is typeset as given, so \\ and \thanks inside it still work.
+\renewcommand{\author}[2][]{%
+  \gappto\@authorlist{\@sep{\ifblank{#1}{#2}{\mbox{#2$^{#1}$}}}}}
+\newcommand{\affiliation}[2][]{%
+  \gappto\@affiliationlist{\@sep{\ifblank{#1}{}{$^{#1}$}#2}}}
+\newcommand{\authornote}[2][]{%
+  \gappto\@authornotelist{\@sep{\ifblank{#1}{}{$^{#1}$}#2}}}
+\newcommand{\metadata}[2][]{%
+  \gappto\@metadatalist{\par\noindent{\sffamily\bfseries #1:}\ #2}}
+\renewcommand{\date}[1]{\metadata[Date]{#1}}
+\newcommand{\correspondence}[1]{\metadata[Correspondence]{#1}}
+\newcommand{\email}[1]{%
+  \ifdefined\href\href{mailto:#1}{\texttt{#1}}\else\texttt{#1}\fi}
+% ", "-separated list: the first \@sep prints nothing, later ones a comma.
+\newcommand{\@printlist}[1]{%
+  {\def\@sep{\def\@sep{, }}#1}}
+
+% Thick rule above the title, thin rule below it (about 4:1).
+\newcommand{\@titlerule}[1]{{\color{accent}\hrule height #1}}
+\newcommand{\@titletoprule}{\@titlerule{2.4pt}}
+\newcommand{\@titlebottomrule}{\@titlerule{0.5pt}}
+\newcommand{\@titlegapabove}{5mm}
+\newcommand{\@titlegapbelow}{4.9mm}
+
+% Logos (optional) / rule / title / rule / authors / affiliations / notes.
+\def\@maketitle{%
+  % Logos identify the authors' institutions, so [anonymous] hides them.
+  \if@preprint@anon\else
+    \ifx\@logos\@empty\else
+      \noindent\@logos\par
+      \vspace{0.6em}
+    \fi
+  \fi
+  % Explicit, equal gaps around the title (no center-environment padding,
+  % no \parskip): the visible space above and below the title text match.
+  {\setlength{\parskip}{0pt}%
+   \@titletoprule
+   \vspace{\@titlegapabove}%
+   {\centering\fontsize{18}{22}\selectfont\sffamily\bfseries \@title\par}%
+   \vspace{\@titlegapbelow}%
+   \@titlebottomrule}
+  \vspace{5mm}
+  \begin{center}
+    \if@preprint@anon
+      {\sffamily\bfseries Anonymous authors\\[2pt]
+       \mdseries\small Paper under double-blind review\par}
+    \else
+      {\fontsize{11}{14}\selectfont\sffamily\bfseries
+       \@printlist{\@authorlist}\par}
+      \ifx\@affiliationlist\@empty\else
+        \vspace{2mm}
+        {\small\sffamily\@printlist{\@affiliationlist}\par}
+      \fi
+      \ifx\@authornotelist\@empty\else
+        \vspace{2mm}
+        {\small\@printlist{\@authornotelist}\par}
+      \fi
+    \fi
+  \end{center}
+  \vspace{2mm}%
+}
+
+% Abstract: rounded thin accent frame, centred sans heading, then the
+% \date / \metadata / \correspondence lines (hidden in anonymous mode).
+\AtEndPreamble{%
+  \@ifpackageloaded{tcolorbox}{}{\RequirePackage{tcolorbox}}%
+  \tcbuselibrary{skins}%
+  \newtcolorbox{preprintabstractbox}{enhanced,colback=white,colframe=accent,
+    boxrule=0.5pt,arc=2.5mm,left=6mm,right=6mm,top=4mm,bottom=4mm,
+    grow to left by=1.5pt,grow to right by=1.5pt,
+    before skip=2mm,after skip=6mm}}
+\renewenvironment{abstract}{%
+  \begin{preprintabstractbox}
+  \setlength{\parskip}{0.4em}%
+  \centerline{\fontsize{12}{14}\selectfont\sffamily\bfseries\color{accent}Abstract}%
+  \vspace{1mm}%
+}{%
+  \par
+  \if@preprint@anon\else
+    \ifx\@metadatalist\@empty\else
+      \vspace{2mm}%
+      {\small\setlength{\parskip}{0.15em}\@metadatalist\par}%
+    \fi
+  \fi
+  \end{preprintabstractbox}%
+}
+
+% ---------------------------------------------------------------- font sizes
+% 10pt text on 11pt leading
+\def\normalsize{\@setsize\normalsize{11pt}\xpt\@xpt}
+\def\small{\@setsize\small{10pt}\ixpt\@ixpt}
+\def\footnotesize{\@setsize\footnotesize{10pt}\ixpt\@ixpt}
+\def\scriptsize{\@setsize\scriptsize{8pt}\viipt\@viipt}
+\def\tiny{\@setsize\tiny{7pt}\vipt\@vipt}
+\def\large{\@setsize\large{14pt}\xiipt\@xiipt}
+\def\Large{\@setsize\Large{16pt}\xivpt\@xivpt}
+\def\LARGE{\@setsize\LARGE{20pt}\xviipt\@xviipt}
+\def\huge{\@setsize\huge{23pt}\xxpt\@xxpt}
+\def\Huge{\@setsize\Huge{28pt}\xxvpt\@xxvpt}
+
+% ---------------------------------------------------------------- sections
+% sections with less space
+% Accent-green sans headings at 12/11/10pt; run-in paragraphs in black sans.
+\def\section{\@startsection {section}{1}{\z@}{-2.0ex plus
+    -0.5ex minus -.2ex}{1.5ex plus 0.3ex
+minus0.2ex}{\fontsize{12.5}{15}\selectfont\sffamily\bfseries\color{accent}\raggedright}}
+
+\def\subsection{\@startsection{subsection}{2}{\z@}{-1.8ex plus
+-0.5ex minus -.2ex}{0.8ex plus .2ex}{\fontsize{11}{13}\selectfont\sffamily\bfseries\color{accent}\raggedright}}
+\def\subsubsection{\@startsection{subsubsection}{3}{\z@}{-1.5ex
+plus      -0.5ex minus -.2ex}{0.5ex plus
+.2ex}{\normalsize\sffamily\bfseries\color{accent}\raggedright}}
+\def\paragraph{\@startsection{paragraph}{4}{\z@}{1.5ex plus
+0.5ex minus .2ex}{-1em}{\normalsize\sffamily\bfseries}}
+\def\subparagraph{\@startsection{subparagraph}{5}{\z@}{1.5ex plus
+  0.5ex minus .2ex}{-1em}{\normalsize\it}}
+
+% ---------------------------------------------------------------- footnotes
+\footnotesep 6.65pt %
+\skip\footins 9pt plus 4pt minus 2pt
+\def\footnoterule{\kern-3pt \hrule width 12pc \kern 2.6pt }
+\setcounter{footnote}{0}
+
+% ---------------------------------------------------------------- lists & paragraphs
+\parindent 0pt
+\topsep 4pt plus 1pt minus 2pt
+\partopsep 1pt plus 0.5pt minus 0.5pt
+\itemsep 2pt plus 1pt minus 0.5pt
+\parsep 2pt plus 1pt minus 0.5pt
+\parskip .5pc
+
+\leftmargin3pc
+\leftmargini\leftmargin \leftmarginii 2em
+\leftmarginiii 1.5em \leftmarginiv 1.0em \leftmarginv .5em
+
+\def\@listi{\leftmargin\leftmargini}
+\def\@listii{\leftmargin\leftmarginii
+   \labelwidth\leftmarginii\advance\labelwidth-\labelsep
+   \topsep 2pt plus 1pt minus 0.5pt
+   \parsep 1pt plus 0.5pt minus 0.5pt
+   \itemsep \parsep}
+\def\@listiii{\leftmargin\leftmarginiii
+    \labelwidth\leftmarginiii\advance\labelwidth-\labelsep
+    \topsep 1pt plus 0.5pt minus 0.5pt
+    \parsep \z@ \partopsep 0.5pt plus 0pt minus 0.5pt
+    \itemsep \topsep}
+\def\@listiv{\leftmargin\leftmarginiv
+     \labelwidth\leftmarginiv\advance\labelwidth-\labelsep}
+\def\@listv{\leftmargin\leftmarginv
+     \labelwidth\leftmarginv\advance\labelwidth-\labelsep}
+\def\@listvi{\leftmargin\leftmarginvi
+     \labelwidth\leftmarginvi\advance\labelwidth-\labelsep}
+
+\abovedisplayskip 7pt plus2pt minus5pt%
+\belowdisplayskip \abovedisplayskip
+\abovedisplayshortskip  0pt plus3pt%
+\belowdisplayshortskip  4pt plus3pt minus3pt%
+
+% ---------------------------------------------------------------- table helpers
+% Shaded cell for your method's row: & \ourscell{\textbf{85.9}} & ...
+\newcommand{\ourscell}[1]{\cellcolor{oursbg}#1}
+% Small coloured delta after a number: 85.9 \gain{15.4}  /  70.1 \drop{2.3}
+\newcommand{\gain}[1]{\textcolor{gaingreen}{\scriptsize $(+#1)$}}
+\newcommand{\drop}[1]{\textcolor{dropred}{\scriptsize $(-#1)$}}
+
+% ---------------------------------------------------------------- appendix overview
+% \begin{appendixoverview}
+%   \appentry{app:ablation}{Additional Ablations}
+%   \appsubentry{app:gate}{Ablation of the gate}
+%   \appendrule
+%   ...
+% \end{appendixoverview}
+% Letters come from \ref, so they stay correct when appendices move.
+% (No float wrapper: tabularx must see \end{appendixoverview} directly.)
+\newenvironment{appendixoverview}{%
+  \par\vspace{0.3\intextsep}%
+  \centering
+  \renewcommand{\arraystretch}{1.15}%
+  \setlength{\tabcolsep}{8pt}%
+  \tabularx{\linewidth}{|>{\raggedright\arraybackslash}p{0.28\linewidth}
+                        |>{\raggedright\arraybackslash}X|}
+  \hline
+  \rowcolor{appendixheader}
+  \textbf{Appendix} & \textbf{Title} \\
+  \hline
+}{%
+  \hline
+  \endtabularx
+  \par\vspace{\intextsep}%
+}
+% Plain black letters (no link colour), as in the original paper.
+\AtBeginDocument{%
+  \@ifpackageloaded{hyperref}{\def\@appref{\ref*}}{\def\@appref{\ref}}}
+\newcommand{\appentry}[2]{%
+  \rowcolor{appendixpurple}
+  \textbf{Appendix~\@appref{#1}} & \textbf{#2} \\}
+\newcommand{\appsubentry}[2]{%
+  \hspace{1.5em}$\hookrightarrow$ Appendix~\@appref{#1} & #2 \\}
+\newcommand{\appendrule}{\hline}
+
+% ---------------------------------------------------------------- writing-style helpers
+\if@preprint@rps
+% Contribution list with automatic circled numbers (refs stay Arabic):
+%   \begin{contributions}
+%     \item \rpsStrongTerm{Short title.} Explanation in plain text.
+%   \end{contributions}
+\newlist{contributions}{enumerate}{1}
+\setlist[contributions]{label=\protect\rpsNumber{\arabic*},ref=\arabic*,
+  leftmargin=*,topsep=2pt,itemsep=2pt}
+
+% cmtt has no bold shape: inside bold text (titles, observations) keep the
+% benchmark's cmtt family and drop only the weight, instead of a font warning.
+\DeclareRobustCommand{\rpsBenchmark}[1]{%
+  \leavevmode{\fontfamily{cmtt}\fontseries{m}\selectfont {#1}}}
+\fi
+
+% Bold emphasis is sans bold (as in the report): \textbf, \rpsStrong and
+% \rpsStrongTerm. Table numbers marked with \rpsBest stay in serif bold.
+\DeclareTextFontCommand{\textbf}{\bfseries\sffamily}
+% Inside tables \textbf stays serif bold, so bold numbers keep the same
+% digit shapes and widths as the regular serif numbers around them.
+\DeclareTextFontCommand{\preprint@textbfserif}{\bfseries}
+\newcommand{\preprint@tablebold}{\let\textbf\preprint@textbfserif}
+\AtBeginEnvironment{tabular}{\preprint@tablebold}
+\AtBeginEnvironment{tabular*}{\preprint@tablebold}
+\AtBeginEnvironment{tabularx}{\preprint@tablebold}
+\if@preprint@rps
+  \DeclareRobustCommand{\rpsStrong}[1]{\leavevmode{\sffamily\bfseries #1}}
+  \DeclareRobustCommand{\rpsStrongTerm}[1]{\leavevmode{\sffamily\bfseries\itshape #1}}
+\fi
+
+% Captions: small text, "Figure 1" / "Table 1" label in accent sans bold.
+\DeclareCaptionFont{preprintlabel}{\sffamily\bfseries\color{accent}}
+\captionsetup{font=small,labelfont=preprintlabel,labelsep=quad,
+  singlelinecheck=false}
+% Same label style for algorithm captions (float's "ruled" style).
+\DeclareCaptionStyle{ruled}{font=small,labelfont=preprintlabel,labelsep=quad,
+  singlelinecheck=off}
+
+\if@preprint@rps
+% Boxes: thin black frame, slightly smaller inner padding for a 5.5in column.
+\tcbset{rpsbase/.append style={left=5pt,right=5pt,top=3pt,bottom=3pt}}
+% Writing-style boxes follow the template accent: deep-green title bars and
+% frames (black under [monochrome]); the question box gets a faint green tint.
+\colorlet{rpsAccent}{accent}
+\colorlet{rpsInsight}{accent}
+\colorlet{rpsPrompt}{accent}
+% Titled boxes use the sans-bold title font of the rest of the template
+% (same definitions as researchpaperstyle.sty, only fonttitle differs).
+\renewtcolorbox{rpsprotocol}[2][]{rpsbase,
+  colback=white,colframe=rpsAccent,
+  colbacktitle=rpsAccent,coltitle=white,fonttitle=\sffamily\bfseries,
+  title={#2},#1}
+\renewtcolorbox{rpsinsight}[2][]{rpsbase,
+  colback=rpsInsight!4!white,colframe=rpsInsight,
+  colbacktitle=rpsInsight,coltitle=white,fonttitle=\sffamily\bfseries,
+  title={#2},#1}
+\renewtcblisting{rpsprompt}[2][]{rpsbase,
+  colback=rpsPrompt!5!white,colframe=rpsPrompt,
+  colbacktitle=rpsPrompt,coltitle=white,fonttitle=\sffamily\bfseries,
+  title={#2},listing only,
+  listing options={language={},basicstyle=\ttfamily\footnotesize,
+    breaklines=true,columns=fullflexible,keepspaces=true,
+    showstringspaces=false,tabsize=2,aboveskip=0pt,belowskip=0pt},#1}
+\fi
+
+\endinput

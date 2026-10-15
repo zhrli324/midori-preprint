@@ -174,6 +174,7 @@
 \definecolor{dropred}{RGB}{190,70,70}       % (-x.x) regressions
 \colorlet{appendixheader}{midorileaf!28}   % appendix overview header row
 \colorlet{appendixpurple}{midorileaf!9}    % appendix overview section rows
+\colorlet{abstractbg}{midorileaf!5}        % abstract box fill (#F7F9F6)
 % Old names kept so documents written for earlier versions still compile.
 \colorlet{linkblue}{linkgreen}
 \colorlet{oursblue}{oursgreen}
@@ -191,6 +192,7 @@
   \colorlet{dropred}{black}
   \colorlet{appendixheader}{black!15}
   \colorlet{appendixpurple}{black!5}
+  \colorlet{abstractbg}{black!3}
 \fi
 
 % Accent-green links, applied only if the document loads hyperref.
@@ -319,7 +321,7 @@
 \AtEndPreamble{%
   \@ifpackageloaded{tcolorbox}{}{\RequirePackage{tcolorbox}}%
   \tcbuselibrary{skins}%
-  \newtcolorbox{preprintabstractbox}{enhanced,colback=white,colframe=accent,
+  \newtcolorbox{preprintabstractbox}{enhanced,colback=abstractbg,colframe=accent,
     boxrule=0.5pt,arc=2.5mm,left=6mm,right=6mm,top=4mm,bottom=4mm,
     grow to left by=1.5pt,grow to right by=1.5pt,
     before skip=2mm,after skip=6mm}}

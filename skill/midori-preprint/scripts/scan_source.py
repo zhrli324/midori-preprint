@@ -323,6 +323,16 @@ def main():
     if urls:
         print("- code/data links: " + ", ".join(sorted(set(urls))))
 
+    own_app = lines_matching(files, root, r"\\section\*?\s*\{\s*Appendix|\\beginappendix|\\appendixpage")
+    if own_app:
+        print("\n## Own appendix title (the template adds \"Appendix\" automatically: comment these out)")
+        for h in own_app:
+            print("- " + h)
+    toc = lines_matching(files, root, r"\\tableofcontents")
+    if toc:
+        print("\n## Table of contents in the source (keep it, or use the [toc] option)")
+        for h in toc:
+            print("- " + h)
     print("\n## Venue paperwork / special inputs")
     for p in files:
         rel = os.path.relpath(p, root)

@@ -11,7 +11,7 @@
 %%   * accent-green sans section headings, sans-bold captions and \textbf
 %%   * small running head with a thin accent rule from page 2 on
 %%   * accent-green hyperlinks, author-year natbib citations
-%%   * helpers for highlighted "ours" table cells, gains, appendix overview
+%%   * helpers for highlighted "ours" table cells and gains
 %%   * the research-paper-style writing layer (researchpaperstyle.sty):
 %%     entity fonts, circled contributions, module symbols, stage markers,
 %%     numbered observations, and black-and-white question/takeaway/prompt boxes
@@ -25,6 +25,7 @@
 %%   \usepackage[nowritingstyle]{preprint} % layout only: do not load the
 %%                                     % research-paper-style layer (\rps...)
 %%   \usepackage[nonatbib]{preprint}   % do not load natbib (e.g. biblatex papers)
+%%   \usepackage[toc]{preprint}        % contents on its own page after the abstract
 %%
 %%   \author[1,\star]{First Author}    % repeat once per author
 %%   \affiliation[1]{University One}   % repeat once per affiliation
@@ -56,6 +57,9 @@
 \newif\if@preprint@natbib
 \@preprint@natbibtrue
 \DeclareOption{nonatbib}{\@preprint@natbibfalse}
+\newif\if@preprint@toc
+\@preprint@tocfalse
+\DeclareOption{toc}{\@preprint@toctrue}
 \ProcessOptions\relax
 
 % ---------------------------------------------------------------- fonts
@@ -156,8 +160,51 @@
 \setlength{\@fpbot}{0pt plus 1fil}
 \raggedbottom
 
-% No table of contents is ever needed.
-\def\addcontentsline#1#2#3{}
+% ---------------------------------------------------------------- contents
+% \tableofcontents (or the [toc] option): green sans "Contents" heading,
+% sections in sans bold, subsections in serif with dot leaders; only the
+% page numbers are links.
+\setcounter{tocdepth}{2}
+\renewcommand{\tableofcontents}{%
+  \section*{\contentsname}%
+  {\setlength{\parskip}{0pt}\@starttoc{toc}\par}%
+  \vspace{1.2em}%
+}
+\renewcommand*{\l@section}[2]{%
+  \ifnum\c@tocdepth>\z@
+    \addpenalty\@secpenalty
+    \addvspace{0.55em plus 1pt}%
+    \setlength\@tempdima{1.6em}%
+    \begingroup
+      \parindent\z@ \rightskip\@pnumwidth \parfillskip-\@pnumwidth
+      \leavevmode\sffamily\bfseries
+      \advance\leftskip\@tempdima \hskip-\leftskip
+      #1\nobreak\hfil\nobreak\hb@xt@\@pnumwidth{\hss #2}\par
+    \endgroup
+  \fi}
+\renewcommand*{\l@subsection}{\@dottedtocline{2}{1.6em}{2.4em}}
+\renewcommand{\@dotsep}{3}
+\AtBeginDocument{\@ifpackageloaded{hyperref}{\hypersetup{linktoc=page}}{}}
+
+% Appendix: \appendix prints a green "Appendix" heading (with a contents
+% entry) just before the first appendix section, so it lands on the right
+% page even when \appendix is followed by \clearpage.
+\newcommand{\appendixname@preprint}{Appendix}
+\newcommand{\preprint@appendixheading}{%
+  \par\noindent
+  {\fontsize{18}{22}\selectfont\sffamily\bfseries\color{accent}\appendixname@preprint\par}%
+  \vspace{5mm}%
+  \phantomsection@preprint
+  \addcontentsline{toc}{section}{\appendixname@preprint}%
+}
+\newcommand{\phantomsection@preprint}{\ifdefined\phantomsection\phantomsection\fi}
+\let\preprint@origappendix\appendix
+\renewcommand{\appendix}{%
+  \preprint@origappendix
+  \global\let\preprint@savedsection\section
+  \gdef\section{\global\let\section\preprint@savedsection
+    \preprint@appendixheading\section}%
+}
 
 % ---------------------------------------------------------------- colours
 % Midori palette ("midori" = green): one deep green for structure, two
@@ -172,8 +219,6 @@
 \colorlet{oursgreen}{midorileaf}             % accent colour for figures/text
 \definecolor{gaingreen}{HTML}{3B7D3F}        % (+x.x) improvements
 \definecolor{dropred}{RGB}{190,70,70}       % (-x.x) regressions
-\colorlet{appendixheader}{midorileaf!28}   % appendix overview header row
-\colorlet{appendixpurple}{midorileaf!9}    % appendix overview section rows
 \colorlet{abstractbg}{midorileaf!7}        % abstract box fill (#F3F7F3)
 % Old names kept so documents written for earlier versions still compile.
 \colorlet{linkblue}{linkgreen}
@@ -190,8 +235,6 @@
   \colorlet{gaingreen}{black}
   \colorlet{gainblue}{black}
   \colorlet{dropred}{black}
-  \colorlet{appendixheader}{black!15}
-  \colorlet{appendixpurple}{black!5}
   \colorlet{abstractbg}{black!3}
 \fi
 
@@ -339,6 +382,8 @@
     \fi
   \fi
   \end{preprintabstractbox}%
+  % [toc]: contents on a page of its own, right after the abstract page
+  \if@preprint@toc\clearpage\tableofcontents\clearpage\fi
 }
 
 % ---------------------------------------------------------------- font sizes
@@ -418,41 +463,6 @@ plus      -0.5ex minus -.2ex}{0.5ex plus
 % Small coloured delta after a number: 85.9 \gain{15.4}  /  70.1 \drop{2.3}
 \newcommand{\gain}[1]{\textcolor{gaingreen}{\scriptsize $(+#1)$}}
 \newcommand{\drop}[1]{\textcolor{dropred}{\scriptsize $(-#1)$}}
-
-% ---------------------------------------------------------------- appendix overview
-% \begin{appendixoverview}
-%   \appentry{app:ablation}{Additional Ablations}
-%   \appsubentry{app:gate}{Ablation of the gate}
-%   \appendrule
-%   ...
-% \end{appendixoverview}
-% Letters come from \ref, so they stay correct when appendices move.
-% (No float wrapper: tabularx must see \end{appendixoverview} directly.)
-\newenvironment{appendixoverview}{%
-  \par\vspace{0.3\intextsep}%
-  \centering
-  \renewcommand{\arraystretch}{1.15}%
-  \setlength{\tabcolsep}{8pt}%
-  \tabularx{\linewidth}{|>{\raggedright\arraybackslash}p{0.28\linewidth}
-                        |>{\raggedright\arraybackslash}X|}
-  \hline
-  \rowcolor{appendixheader}
-  \textbf{Appendix} & \textbf{Title} \\
-  \hline
-}{%
-  \hline
-  \endtabularx
-  \par\vspace{\intextsep}%
-}
-% Plain black letters (no link colour), as in the original paper.
-\AtBeginDocument{%
-  \@ifpackageloaded{hyperref}{\def\@appref{\ref*}}{\def\@appref{\ref}}}
-\newcommand{\appentry}[2]{%
-  \rowcolor{appendixpurple}
-  \textbf{Appendix~\@appref{#1}} & \textbf{#2} \\}
-\newcommand{\appsubentry}[2]{%
-  \hspace{1.5em}$\hookrightarrow$ Appendix~\@appref{#1} & #2 \\}
-\newcommand{\appendrule}{\hline}
 
 % ---------------------------------------------------------------- writing-style helpers
 \if@preprint@rps

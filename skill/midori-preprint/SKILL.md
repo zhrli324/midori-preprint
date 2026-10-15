@@ -86,7 +86,8 @@ python3 <skill>/scripts/scan_source.py <原工程目录>
 ### 6. 正文和附录
 - 按原顺序 `\input` 各章节。摘要环境里去掉负间距，内容不变。
 - 会议 checklist 这类投稿表格（NeurIPS Paper Checklist、ACL Responsible NLP checklist 等）不 `\input`，文件保留。致谢、Impact Statement、Limitations 等是论文内容，保留。
-- 附录：`\appendix` 前加 `\clearpage`。
+- 附录：`\appendix` 前加 `\clearpage`。模板会在附录开头自动加 “Appendix” 标题；如果原稿紧跟 `\appendix` 自己写了附录总标题（如 `\section*{Appendix}`、自定义类的 `\beginappendix`），把那一行注释掉并标 `% [preprint]`，避免出现两个标题。
+- 目录：原稿有 `\tableofcontents` 就保留（或换成 `[toc]` 选项）；原稿没有就不要加，除非用户要求。
 
 ### 7. 编译和检查
 ```bash
@@ -103,7 +104,7 @@ python3 <skill>/scripts/build_check.py <新工程目录> --render 55
 ```bash
 python3 <skill>/scripts/text_diff.py <原工程目录> <新工程目录>
 ```
-脚本会比较两边每个 `.tex` 文件去掉命令、注释和纯版式参数（间距、浮动体位置和宽度、缩放）后的文字和数字序列（入口文件改名时加 `--entry 原名 --converted-entry 新名`）。正常情况下只剩这几类差异：入口文件里不再 `\input` 的 checklist 等投稿表格；摘要从自定义类的 `\abstract{...}` 命令移到正文的 `abstract` 环境。其他任何差异（改了措辞、移动或删掉了链接、改了颜色名、加了 `\rps...` 宏）都说明动了论文本身，要改回去。
+脚本会比较两边每个 `.tex` 文件去掉命令、注释和纯版式参数（间距、浮动体位置和宽度、缩放）后的文字和数字序列（入口文件改名时加 `--entry 原名 --converted-entry 新名`）。正常情况下只剩这几类差异：入口文件里不再 `\input` 的 checklist 等投稿表格；摘要从自定义类的 `\abstract{...}` 命令移到正文的 `abstract` 环境；注释掉的原稿附录总标题（“Appendix”）。其他任何差异（改了措辞、移动或删掉了链接、改了颜色名、加了 `\rps...` 宏）都说明动了论文本身，要改回去。
 
 ### 9. 交付
 - 把编译好的 `main.pdf` 和 `main.bbl` 放进新工程（上传 arXiv 需要 `.bbl`）。

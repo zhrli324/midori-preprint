@@ -21,6 +21,7 @@
 | （无） | 默认：5.5in 单栏，Midori 绿色，加载写作风格层 |
 | `nowritingstyle` | 不加载 researchpaperstyle.sty（原稿没用 `\rps...` 宏时使用） |
 | `nonatbib` | 不加载 natbib（原稿用 biblatex 时使用） |
+| `toc` | 摘要后单独一页目录。只在原稿有 `\tableofcontents` 或用户要求时使用；原稿的 `\tableofcontents` 可以换成这个选项 |
 | `anonymous` | 隐藏作者、单位、作者说明、摘要框里的元信息和 logo |
 | `monochrome` | 所有绿色变成黑/灰（logo 不变色） |
 | `wide` | 6.5in 正文宽度 |
@@ -40,6 +41,7 @@
 | `\runninghead{...}` | 第 2 页起左上角页眉 |
 
 模板对正文的统一处理（属于模板外观，不需要也不应该在正文里改）：
+- `\appendix` 会在第一个附录章节前自动加一个深绿色的 “Appendix” 大标题（并在目录里加一行）
 - `\textbf` 在正文中是无衬线粗体，在 `tabular` / `tabular*` / `tabularx` 里是衬线粗体（数字字形一致）
 - 图注标签 "Figure 1" / "Table 1" 是深绿无衬线粗体，图注一律左对齐
 - 章节标题深绿无衬线；`\paragraph` 是黑色无衬线粗体
@@ -47,7 +49,7 @@
 
 数学字体：模板已经修正了 mathpazo 的希腊字母问题。`\mathbf{\tau}`、`\mathrm{\lambda}` 中的小写希腊字母和标准 LaTeX 一样保持原样（要加粗用 `\bm{\tau}`），`\mathbf{\Omega}` 是粗体直立大写希腊字母。唯一的例外是 `\mathit{\Omega}`（Palatino 没有带希腊字母的斜体文本字体）；原稿用到时改成 `\mathnormal{\Omega}`，属于允许的显示修正，加 `% [preprint]` 注释。
 
-模板另外提供的辅助命令（`\ourscell`、`\gain`、`\drop`、`appendixoverview`、`\rps...`）属于写作风格。原稿没用就不要加进去。
+模板另外提供的辅助命令（`\ourscell`、`\gain`、`\drop`、`\rps...`）属于写作风格。原稿没用就不要加进去。
 
 ## 2. 识别并移除会议模板
 

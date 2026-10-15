@@ -15,6 +15,7 @@ latexmk -pdf main.tex
 \usepackage[wide]{preprint}             % 6.5in 正文宽度
 \usepackage[nowritingstyle]{preprint}   % 不加载 researchpaperstyle.sty
 \usepackage[nonatbib]{preprint}         % 不加载 natbib
+\usepackage[toc]{preprint}              % 摘要后加一页目录
 ```
 
 ## 首页
@@ -36,6 +37,8 @@ latexmk -pdf main.tex
   \logoimage[0.13in]{figures/midori-wordmark}}
 \runninghead{Preprint}
 ```
+
+`\appendix` 会在附录开头自动加上 “Appendix” 标题。
 
 完整示例见 `main.tex`，编译效果见 `preview/`。
 

@@ -219,7 +219,7 @@
 \colorlet{oursgreen}{midorileaf}             % accent colour for figures/text
 \definecolor{gaingreen}{HTML}{3B7D3F}        % (+x.x) improvements
 \definecolor{dropred}{RGB}{190,70,70}       % (-x.x) regressions
-\colorlet{abstractbg}{midorileaf!7}        % abstract box fill (#F3F7F3)
+\colorlet{abstractbg}{midorileaf!8}        % abstract box fill (#F2F6F1)
 % Old names kept so documents written for earlier versions still compile.
 \colorlet{linkblue}{linkgreen}
 \colorlet{oursblue}{oursgreen}
@@ -359,13 +359,13 @@
   \vspace{2mm}%
 }
 
-% Abstract: rounded thin accent frame, centred sans heading, then the
+% Abstract: rounded light-green panel (no frame), centred sans heading, then the
 % \date / \metadata / \correspondence lines (hidden in anonymous mode).
 \AtEndPreamble{%
   \@ifpackageloaded{tcolorbox}{}{\RequirePackage{tcolorbox}}%
   \tcbuselibrary{skins}%
-  \newtcolorbox{preprintabstractbox}{enhanced,colback=abstractbg,colframe=accent,
-    boxrule=0.5pt,arc=2.5mm,left=6mm,right=6mm,top=4mm,bottom=4mm,
+  \newtcolorbox{preprintabstractbox}{enhanced,colback=abstractbg,colframe=abstractbg,
+    boxrule=0pt,arc=2.5mm,left=6mm,right=6mm,top=4mm,bottom=4mm,
     grow to left by=1.5pt,grow to right by=1.5pt,
     before skip=2mm,after skip=6mm}}
 \renewenvironment{abstract}{%
